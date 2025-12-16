@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小松高校 51回生 同窓会名簿</title>
+    <!-- CSSはstyle.cssに記述 -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts で高級感のあるフォントを読み込み -->
+    <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="luxury-border"></div> <!-- 画面端の装飾線 -->
+    
+    <header>
+        <p class="sub-title">石川県立小松高等学校 第51回生</p>
+        <h1>同窓会 出席者名簿</h1>
+        <div class="divider"><span>✦</span></div>
+    </header>
+    
+    <!-- メインコンテンツを中央に配置するためのコンテナ -->
+    <div class="content-wrapper">
+        <main id="member-list">
+            <!-- GASからデータが読み込まれます -->
+        </main>
+    </div>
+
+    <script>
+        // デプロイしたGASのウェブアプリURLをここに貼り付けてください
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbw7owtb7y_gbNi-ytqONncHc9VR7a8775HKtCas9HfXSum27blBQS5DX0XAAWPFNCrZ/exec";
+
+        async function fetchMembers() {
+            // **** 【修正箇所：ローディングのデザイン変更】 ****
+            document.getElementById('member-list').innerHTML = `
+                <div class="loading-container">
+                    <div class="elegant-spinner"></div>
+                    <p class="loading-message">
+                        当時の絆を読み込み中...
+                    </p>
+                    <p class="loading-sub-message">
+                        名簿データを準備しています
+                    </p>
+                </div>
+            `;
+            // **********************************
+            
+            try {
+                const response = await fetch(GAS_URL);
+                let data = await response.json();
+                
+                // 「恩師」を最上位に、それ以外はクラス番号でソート
+                data.sort((a, b) => {
+                    // 恩師のクラス名（文字列）が最優先
+                    if (a.class === '恩師' && b.class !== '恩師') return -1;
+                    if (a.class !== '恩師' && b.class === '恩師') return 1;
+
+                    // それ以外はクラス番号（数値）で昇順ソート
+                    const classA = parseInt(a.class, 10);
+                    const classB = parseInt(b.class, 10);
+                    return classA - classB;
+                });
+                
+                renderMembers(data);
+            } catch (error) {
+                document.getElementById('member-list').innerHTML = '<p class="error">データの取得に失敗しました。GASのURLを確認してください。</p>';
+                console.error(error);
+            }
+        }
+
+        function renderMembers(members) {
+            const container = document.getElementById('member-list');
+            container.innerHTML = ''; // ローディングを消去
+
+            let currentClass = null;
+            let classSection = null;
+
+            members.forEach(member => {
+                // クラスが変わったら新しいセクション（見出し）を作成
+                if (member.class !== currentClass) {
+                    currentClass = member.class;
+                    
+                    // 恩師の場合と、クラス番号の場合で表示を切り替える
+                    let headingText = (currentClass === '恩師') ? '恩師の先生方' : `${currentClass}組`;
+
+                    const heading = document.createElement('div');
+                    heading.className = 'class-divider';
+                    heading.innerHTML = `<h2>${headingText}</h2>`;
+                    container.appendChild(heading);
+                    
+                    // カードを並べるためのグリッドコンテナを作成
+                    classSection = document.createElement('div');
+                    classSection.className = 'class-grid'; // 4列グリッド
+                    container.appendChild(classSection);
+                }
+
+                // カードの生成（旧姓のみ、横書き表示）
+                const card = document.createElement('div');
+                // 恩師の場合、クラス番号（0）として色を固定しても良い
+                let classIndex = (currentClass === '恩師') ? 0 : currentClass;
+                card.className = `member-card class-color-${classIndex % 5}`; 
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="name-display">
+                            <span class="family-name">${member.name_2nd}</span>
+                            <span class="first-name">${member.name_1st}</span>
+                        </div>
+                    </div>
+                `;
+                classSection.appendChild(card);
+            });
+        }
+        
+        // ページロード時に実行
+        fetchMembers();
+    </script>
+</body>
+</html>
